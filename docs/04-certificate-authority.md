@@ -11,7 +11,7 @@ In our case we do it on the master-1 node, as we have set it up to be the admini
 
 ## Certificate Authority
 
-In this section you will provision a Certificate Authority that can be used to generate additional TLS certificates.
+In this section you will provision a Certificate Authority that can be used to generate additional TLS certificates. In this case, the master node(s) are the CA(s).
 
 Create a CA certificate, then generate a Certificate Signing Request and use it to create a private key:
 
@@ -44,7 +44,26 @@ The ca.key is used by the CA for signing certificates. And it should be securely
 
 ## Client and Server Certificates
 
-In this section you will generate client and server certificates for each Kubernetes component and a client certificate for the Kubernetes `admin` user.
+In this section you will generate client and server certificates for each Kubernetes component and a client certificate for the Kubernetes `admin` user. **The client certificates are more concerned with the cert subject (i.e. CN (username) and OU (group that the user belongs to)) while the server certificates are more concerned with SAN (subject alternative names)**.
+
+### Server certificates (keep in mind the SANs)
+```
+kube-apiserver 
+etcd
+kubelet
+```
+
+### Client certificates (keep in mind the subject CN and OU)
+```
+-Node authentication/authorization via "system" prefix for system components
+CN=system:kube-controller-manager
+CN=system:kube-scheduler
+CN=system:kube-proxy
+
+-User
+CN=admin,OU=system:masters
+CN=service-accounts (for controller manager)
+```
 
 ### The Admin Client Certificate
 
@@ -161,6 +180,13 @@ IP.5 = 127.0.0.1
 EOF
 ```
 
+```
+NOTE:
+-kubernetes (10.96.0.1) -> service in default namespace for pointing to the kube-apiserver
+-Don't forget to include the IPs for other master nodes and the LB
+-Don't forget to include 127.0.0.1
+```
+
 Generates certs for kube-apiserver
 
 ```
@@ -197,6 +223,13 @@ IP.1 = 192.168.5.11
 IP.2 = 192.168.5.12
 IP.3 = 127.0.0.1
 EOF
+```
+
+```
+NOTE:
+-using stacked topology where etcd is part of the master nodes (alternative is external etcd topology)
+-Don't forget to include the IPs for other master nodes and the LB
+-Don't forget to include 127.0.0.1
 ```
 
 Generates certs for ETCD
@@ -245,6 +278,11 @@ for instance in master-1 master-2; do
     etcd-server.key etcd-server.crt \
     ${instance}:~/
 done
+```
+
+```
+NOTE:
+-Since the master nodes are behind LB (traffic split between them) and they are the CAs, send the CA key and certs to the other master nodes
 ```
 
 > The `kube-proxy`, `kube-controller-manager`, `kube-scheduler`, and `kubelet` client certificates will be used to generate client authentication configuration files in the next lab. These certificates will be embedded into the client authentication configuration files. We will then copy those configuration files to the other master nodes.
