@@ -11,7 +11,7 @@ We will now install the kubernetes components
 The Certificates and Configuration are created on `master-1` node and then copied over to workers using `scp`. 
 Once this is done, the commands are to be run on first worker instance: `worker-1`. Login to first worker instance using SSH Terminal.
 
-### Provisioning  Kubelet Client Certificates
+### Provisioning  Kubelet Server AND Client Certificates (watch the SAN, CN and OU)
 
 Kubernetes uses a [special-purpose authorization mode](https://kubernetes.io/docs/admin/authorization/node/) called Node Authorizer, that specifically authorizes API requests made by [Kubelets](https://kubernetes.io/docs/concepts/overview/components/#kubelet). In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the `system:nodes` group, with a username of `system:node:<nodeName>`. In this section you will create a certificate for each Kubernetes worker node that meets the Node Authorizer requirements.
 
@@ -93,6 +93,11 @@ On master-1:
 master-1$ scp ca.crt worker-1.crt worker-1.key worker-1.kubeconfig worker-1:~/
 ```
 
+```
+NOTE:
+-No need to SCP the ca.key to worker nodes (ca.key SCPed ONLY to each master nodes because they are also acting as CAs)
+```
+
 ### Download and Install Worker Binaries
 
 Going forward all activities are to be done on the `worker-1` node.
@@ -161,7 +166,20 @@ runtimeRequestTimeout: "15m"
 EOF
 ```
 
-> The `resolvConf` configuration is used to avoid loops when using CoreDNS for service discovery on systems running `systemd-resolved`.
+> The `resolvConf` configuration is used to avoid loops when using CoreDNS for service discovery on systems running `systemd-resolved`. Additionally, I believe it will be used if CoreDNS is NOT able to resolve the domain name.
+
+```
+NOTE:
+1. CNI and CoreDNS configured in kubelet service!
+   *CNI in kubelet because after creating the container and network namespace, need to invoke CNI plugin to create the bridge/virtual switch network (pod-to-pod networking) while kube-proxy is for service networking
+2. 
+clusterDomain: "cluster.local"
+clusterDNS:
+  - "10.96.0.10"
+  
+  This is the service clusterIP of the kube-dns service which is a service for CoreDNS (kubectl -n kube-system get svc kube-dns)
+3. IF CoreDNS is NOT able to resolve the domain the use the nameserver/DNS specified in the NODE's /etc/resolv.conf
+```
 
 Create the `kubelet.service` systemd unit file:
 
@@ -191,7 +209,12 @@ WantedBy=multi-user.target
 EOF
 ```
 
-### Configure the Kubernetes Proxy
+```
+NOTE:
+1. Run kubelet.service after docker.service has started because kubelet is responsible for creating containers using CRI (e.g. Docker in this case)
+```
+
+### Configure the Kubernetes Proxy (allows service networking, in the background it creates IP forwarding rules between the service IP and pod IP using default mode "iptables")
 On worker-1:
 ```
 worker-1$ sudo mv kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
@@ -208,6 +231,22 @@ clientConnection:
 mode: "iptables"
 clusterCIDR: "192.168.5.0/24"
 EOF
+```
+
+> Notice that the mode is set to `iptables` and it requires the NODE's cluter IP range (not the service and pod)
+
+```
+NOTE:
+
+IP address range
+-pod IP address range -> should be in the CNI config file
+-service IP address range -> kube-apiserver config (because Service is an object)
+-node IP address range ->
+1. kubectl get node -o wide
+2. ip addr show <node interface>
+OR
+via kube-proxy I guess...
+
 ```
 
 Create the `kube-proxy.service` systemd unit file:
@@ -257,9 +296,11 @@ NAME       STATUS     ROLES    AGE   VERSION
 worker-1   NotReady   <none>   93s   v1.13.0
 ```
 
+> Note: worker-1 is now registered because kubelet is running on it and interacting with the API server
+
 > Note: It is OK for the worker node to be in a NotReady state.
   That is because we haven't configured Networking yet.
 
-Optional: At this point you may run the certificate verification script to make sure all certificates are configured correctly. Follow the instructions [here](verify-certificates.md)
+Optional (tried but script does NOT work...): At this point you may run the certificate verification script to make sure all certificates are configured correctly. Follow the instructions [here](verify-certificates.md)
 
 Next: [TLS Bootstrapping Kubernetes Workers](10-tls-bootstrapping-kubernetes-workers.md)
