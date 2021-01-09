@@ -54,6 +54,17 @@ Install the Kubernetes binaries:
 }
 ```
 
+```
+server certificate:
+1. kube-apiserver
+
+client --> server:
+1. kube-apiserver --> etcd
+2. kube-apiserver --> kubelet
+
+Refer to Chapter 7 - Security slide #63
+```
+
 The instance internal IP address will be used to advertise the API Server to members of the cluster. Retrieve the internal IP address for the current compute instance:
 
 ```
@@ -198,6 +209,7 @@ EOF
 ### Verification
 
 ```
+# Check whether the API server could discover the other components
 kubectl get componentstatuses --kubeconfig admin.kubeconfig
 ```
 
@@ -253,6 +265,8 @@ Make a HTTP request for the Kubernetes version info:
 
 ```
 curl  https://192.168.5.30:6443/version -k
+
+-k -> skip TLS certificate verification (data in transit still encrypted)
 ```
 
 > output
