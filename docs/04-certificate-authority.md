@@ -55,7 +55,7 @@ kubelet
 
 ### Client certificates (keep in mind the subject CN and OU)
 ```
--Node authentication/authorization via "system" prefix for system components
+-"system" prefix for system components
 CN=system:kube-controller-manager
 CN=system:kube-scheduler
 CN=system:kube-proxy
