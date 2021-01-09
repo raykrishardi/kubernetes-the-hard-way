@@ -1,20 +1,20 @@
-# Generating Kubernetes Configuration Files for Authentication
+# Generating Kubernetes Configuration Files for Authentication by the clients to the API server
 
 In this lab you will generate [Kubernetes configuration files](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/), also known as kubeconfigs, which enable Kubernetes clients to locate and authenticate to the Kubernetes API Servers.
 
 ## Client Authentication Configs
 
-In this section you will generate kubeconfig files for the `controller manager`, `kube-proxy`, `scheduler` clients and the `admin` user.
+In this section you will generate kubeconfig files for the `controller manager`, `kube-proxy`, `scheduler` clients and the `admin` user which are the clients to the API server (refer to chapter 7 - security slide #63).
 
 ### Kubernetes Public IP Address
 
-Each kubeconfig requires a Kubernetes API Server to connect to. To support high availability the IP address assigned to the load balancer will be used. In our case it is `192.168.5.30`
+Each kubeconfig requires a Kubernetes API Server to connect to. To support high availability the IP address assigned to the load balancer will be used. In our case it is `192.168.5.30`. **`kube-scheduler` and `kube-controller-manager` could reach the API server via `127.0.0.1` since they are in the same master node while `kube-proxy` and `admin` users require the LB address because they are in different node**.
 
 ```
 LOADBALANCER_ADDRESS=192.168.5.30
 ```
 
-### The kube-proxy Kubernetes Configuration File
+### The kube-proxy (kube-proxy enables service networking) Kubernetes Configuration File (worker node, refer to API server using LB)
 
 Generate a kubeconfig file for the `kube-proxy` service:
 
@@ -41,15 +41,27 @@ Generate a kubeconfig file for the `kube-proxy` service:
 }
 ```
 
+```
+NOTE:
+*REMEMBER that every call to the API server require the CA.crt and the client's private and public key pairs
+*  -CA.crt is required in every node to verify that the server and client certificates are valid in mTLS env like k8s (just like root CA certificate in web browsers which is used to check the legitimacy of server certificate)
+*kubectl config set-cluster -> refer to the API server in kubeconfig context
+*  --embed-certs -> embed the given certificate as base64 string
+*kubectl config set-credentials -> set the user credentials (public and private cert and keys) for kubeconfig context
+*kubectl config set-context -> specify which credentials to use to authenticate to which API server (map the cluster and user credentials)
+```
+
 Results:
 
 ```
 kube-proxy.kubeconfig
+
+# If you check the content of the file, it will be in the format of a valid kubeconfig file. ADDITIONALLY, it does NOT add the cluster, creds, and context in the default kubeconfig in ~/.kube/ (could double check using kubectl config view after running the above command to generate the file)
 ```
 
 Reference docs for kube-proxy [here](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-proxy/)
 
-### The kube-controller-manager Kubernetes Configuration File
+### The kube-controller-manager Kubernetes Configuration File (master node, can refer to API server using 127.0.0.1)
 
 Generate a kubeconfig file for the `kube-controller-manager` service:
 
@@ -84,7 +96,7 @@ kube-controller-manager.kubeconfig
 
 Reference docs for kube-controller-manager [here](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/)
 
-### The kube-scheduler Kubernetes Configuration File
+### The kube-scheduler Kubernetes Configuration File (master node, can refer to API server using 127.0.0.1)
 
 Generate a kubeconfig file for the `kube-scheduler` service:
 
@@ -119,7 +131,7 @@ kube-scheduler.kubeconfig
 
 Reference docs for kube-scheduler [here](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-scheduler/)
 
-### The admin Kubernetes Configuration File
+### The admin Kubernetes Configuration File (generally refer to API server using LB, HOWEVER, in this case since master-1 itself is used as the administrative client, you could use 127.0.0.1)
 
 Generate a kubeconfig file for the `admin` user:
 
