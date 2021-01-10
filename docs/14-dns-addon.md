@@ -1,6 +1,6 @@
 # Deploying the DNS Cluster Add-on (CoreDNS)
 
-In this lab you will deploy the [DNS add-on](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/) which provides DNS based service discovery (so that you could refer to services by its service name), backed by [CoreDNS](https://coredns.io/), to applications (pods) running inside the Kubernetes cluster.
+In this lab you will deploy the [DNS add-on](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/) which provides DNS based service discovery (so that you could refer to services by its service name), backed by [CoreDNS](https://coredns.io/), to applications (pods) running inside the Kubernetes cluster. Each time a service is created, DNS record containing the service name and service clusterIP is created in the DNS server.
 
 ## The DNS Cluster Add-on
 
