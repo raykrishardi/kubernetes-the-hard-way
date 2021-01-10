@@ -1,4 +1,4 @@
-# TLS Bootstrapping Worker Nodes
+# TLS Bootstrapping Worker Nodes (automate kubelet client and server certificates renewal)
 
 In the previous step we configured a worker node by
 - Creating a set of key pairs for the worker node by ourself (i.e. create client and server certificates for kubelet (SAN, CN, and OU))
