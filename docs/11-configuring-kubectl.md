@@ -10,6 +10,11 @@ Each kubeconfig requires a Kubernetes API Server to connect to. To support high 
 
 Generate a kubeconfig file suitable for authenticating as the `admin` user:
 
+Check current kubeconfig
+```
+kubectl config view
+```
+
 ```
 {
   KUBERNETES_LB_ADDRESS=192.168.5.30
@@ -35,10 +40,17 @@ Reference doc for kubectl config [here](https://kubernetes.io/docs/tasks/access-
 
 ## Verification
 
+Check the kubeconfig file
+```
+kubectl config view
+```
+
 Check the health of the remote Kubernetes cluster:
 
 ```
 kubectl get componentstatuses
+OR
+kubectl get cs
 ```
 
 > output
