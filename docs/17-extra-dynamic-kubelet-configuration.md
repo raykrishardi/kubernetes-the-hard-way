@@ -1,4 +1,10 @@
-# Dynamic Kubelet Configuration
+# Dynamic Kubelet Configuration (i.e. dynamically update changes to kubelet configuration file without manually restarting the kubelet service)
+
+***______
+Ref: https://insujang.github.io/2020-08-24/dynamic-kubelet-configuration/
+Kubelet, at launch time, loads configuration files from pre-specified files. Changed configurations are not applied into the running Kubelet process during runtime, hence manual restarting Kubelet is required after modification.
+Dynamic Kubelet configuration eliminates this burden, making Kubelet monitors its configuration changes and restarts when it is updated. It uses Kubernetes a ConfigMap object.
+***_____
 
 `sudo apt install -y jq`
 
