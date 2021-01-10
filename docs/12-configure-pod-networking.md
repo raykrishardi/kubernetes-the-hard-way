@@ -1,10 +1,10 @@
-# Provisioning Pod Network
+# Provisioning Pod Networking with CNI (CNI is configured in each worker nodes)
 
-We chose to use CNI - [weave](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/) as our networking option.
+We chose to use CNI - [weave](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/) as our networking option. CNI is configured in kubelets because each time the kubelet/CRI create a pod and network NS, need to call the CNI plugins to create the bridge network for pod-to-pod communication.
 
 ### Install CNI plugins
 
-Download the CNI Plugins required for weave on each of the worker nodes - `worker-1` and `worker-2`
+Download the CNI Plugins/scripts (e.g. bridge, host-local, vlan, ipvlan, etc) required for weave on each of the worker nodes - `worker-1` and `worker-2`
 
 `wget https://github.com/containernetworking/plugins/releases/download/v0.7.5/cni-plugins-amd64-v0.7.5.tgz`
 
@@ -22,6 +22,8 @@ Deploy weave network. Run only once on the `master` node.
 `kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"`
 
 Weave uses POD CIDR of `10.32.0.0/12` by default.
+
+This will deploy a `daemonset` of Weave pods in `kube-system` namespace (weave pod contains 2 containers)
 
 ## Verification
 
