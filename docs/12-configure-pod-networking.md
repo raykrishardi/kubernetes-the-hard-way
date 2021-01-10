@@ -2,7 +2,7 @@
 
 We chose to use CNI - [weave](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/) as our networking option. CNI is configured in kubelets because each time the kubelet/CRI create a pod and network NS, need to call the CNI plugins to create the bridge network for pod-to-pod communication.
 
-### Install CNI plugins
+### Install CNI plugins (weave dependencies, it requires other CNI plugins/scripts)
 
 Download the CNI Plugins/scripts (e.g. bridge, host-local, vlan, ipvlan, etc) required for weave on each of the worker nodes - `worker-1` and `worker-2`
 
