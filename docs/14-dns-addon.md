@@ -1,6 +1,6 @@
-# Deploying the DNS Cluster Add-on
+# Deploying the DNS Cluster Add-on (CoreDNS)
 
-In this lab you will deploy the [DNS add-on](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/) which provides DNS based service discovery, backed by [CoreDNS](https://coredns.io/), to applications running inside the Kubernetes cluster.
+In this lab you will deploy the [DNS add-on](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/) which provides DNS based service discovery (so that you could refer to services by its service name), backed by [CoreDNS](https://coredns.io/), to applications (pods) running inside the Kubernetes cluster.
 
 ## The DNS Cluster Add-on
 
@@ -35,6 +35,8 @@ coredns-699f8ddd77-94qv9   1/1     Running   0          20s
 coredns-699f8ddd77-gtcgb   1/1     Running   0          20s
 ```
 
+> CoreDNS is deployed as deployment with 2 pods in kube-system namespace for HA setup.
+
 Reference: https://kubernetes.io/docs/tasks/administer-cluster/coredns/#installing-coredns
 
 ## Verification
@@ -61,7 +63,7 @@ busybox-bd8fb7cbd-vflm9   1/1     Running   0          10s
 Execute a DNS lookup for the `kubernetes` service inside the `busybox` pod:
 
 ```
-kubectl exec -ti busybox -- nslookup kubernetes
+kubectl exec -it busybox -- nslookup kubernetes
 ```
 
 > output
