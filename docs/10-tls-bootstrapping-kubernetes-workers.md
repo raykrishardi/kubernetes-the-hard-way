@@ -27,12 +27,19 @@ So let's get started!
 **kube-apiserver** - Ensure bootstrap token based authentication is enabled on the kube-apiserver.
 
 `--enable-bootstrap-token-auth=true`
+```
+Check by:
+ps aux | grep kube-api (check the kube-apiserver process and look for the flag)
+```
 
 **kube-controller-manager** - **The certificate signing requests (CSRs) are signed by the kube-controller-manager ultimately**. The kube-controller-manager requires the CA Certificate and Key to perform these operations.
 
 ```
   --cluster-signing-cert-file=/var/lib/kubernetes/ca.crt \\
   --cluster-signing-key-file=/var/lib/kubernetes/ca.key
+  
+  Check by:
+  ps aux | grep kube-controller-manager (check the controller-manager process and look for the flag)
 ```
 
 > Note: We have already configured these in our setup in this course
@@ -396,7 +403,7 @@ EOF
 > Remember to run the above commands on worker node: `worker-2`
 
 
-## Step 9 Approve Server CSR
+## Step 9 Approve SERVER CSR (client bootstrap CSR automatically approved)
 
 master-1 $ `kubectl get csr`
 
