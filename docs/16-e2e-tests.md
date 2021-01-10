@@ -23,6 +23,7 @@ GO111MODULE=on go install ./kubetest
 ## Use the version specific to your cluster
 
 ```
+sudo apt-get install -y jq
 K8S_VERSION=$(kubectl version -o json | jq -r '.serverVersion.gitVersion')
 export KUBERNETES_CONFORMANCE_TEST=y
 export KUBECONFIG="$HOME/.kube/config"
@@ -32,6 +33,8 @@ export KUBECONFIG="$HOME/.kube/config"
 kubetest --provider=skeleton --test --test_args=”--ginkgo.focus=\[Conformance\]” --extract ${K8S_VERSION} | tee test.out
 
 ```
+
+> --provider=skeleton refers that it's local cluster setup instead of hosted in cloud environment (e.g. AWS). **The above command just focuses on conformance ONLY (NOT ALL TEST cases)**
 
 
 This could take about 1.5 to 2 hours. The number of tests run and passed will be displayed at the end.
