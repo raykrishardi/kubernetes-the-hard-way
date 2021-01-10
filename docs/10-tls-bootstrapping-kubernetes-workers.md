@@ -137,11 +137,13 @@ Once this is created the token to be used for authentication is `07401b.f395accd
 <token ID>.<token secret>
 `
 
+> **IMPORTANT** The bootstrap token could be used by all other worker nodes or each node has its own bootstrap token
+
 Reference: https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/#bootstrap-token-secret-format
 
-## Step 2 Authorize workers(kubelets) to create CSR (i.e. you could think of like allow bootstrap token to create CSR)
+## Step 2 Authorize workers(kubelets) to create CSR (i.e. you could think of like allow bootstrap token to create CSR because the token is assuming group system:bootstrappers which are kubelets)
 
-Next we associate the group we created before (`(system:bootstrappers)` is used in this case instead of the NEW `(system:bootstrappers:worker)`) to the system:node-bootstrapper ClusterRole. This ClusterRole gives the group enough permissions to bootstrap the kubelet
+Next we associate the group we created before (`(system:bootstrappers)` is used in this case instead of the NEW `(system:bootstrappers:worker)`) to the system:node-bootstrapper ClusterRole. This ClusterRole gives the group enough permissions to bootstrap the kubelet. From the video (https://www.youtube.com/watch?v=qnD95QkphfU&list=PL2We04F3Y_41jYdadX55fdJplDvgNGENo&index=13&ab_channel=KodeKloud), at this point you could run `kubectl get csr` on master node and the bootstrap token should now be created (I think it will be auto approved when following next step...)...
 
 ```
 master-1 $ kubectl create clusterrolebinding create-csrs-for-bootstrapping --clusterrole=system:node-bootstrapper --group=system:bootstrappers
@@ -170,7 +172,10 @@ kubectl create -f csrs-for-bootstrapping.yaml
 ```
 Reference: https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#authorize-kubelet-to-create-csr
 
-## Step 3 Authorize workers(kubelets) to approve CSR (i.e. you could think of like allow bootstrap token to approve CSR)
+## Step 3 Authorize workers(kubelets) to approve CSR (i.e. you could think of like allow bootstrap token to approve CSR because the token is assuming group system:bootstrappers which are kubelets)
+
+From the video, this will allow bootstrap CSR to be automatically approved and the node will be automatically part of the cluster.
+
 ```
 master-1 $ kubectl create clusterrolebinding auto-approve-csrs-for-group --clusterrole=system:certificates.k8s.io:certificatesigningrequests:nodeclient --group=system:bootstrappers
 
@@ -198,7 +203,7 @@ kubectl create -f auto-approve-csrs-for-group.yaml
 
 Reference: https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#approval
 
-## Step 3 Authorize workers(kubelets) to Auto Renew client and server Certificates on expiration
+## Step 3 Authorize workers(kubelets) to Auto Renew client Certificates (AND server certificates???) on expiration
 
 We now create the Cluster Role Binding required for the nodes to automatically renew the certificates on expiry. Note that we are NOT using the **system:bootstrappers** group here any more. Since by the renewal period, we believe the node would be bootstrapped and part of the cluster already. All nodes are part of the **system:nodes** group.
 
