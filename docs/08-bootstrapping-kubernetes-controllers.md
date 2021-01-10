@@ -125,6 +125,17 @@ WantedBy=multi-user.target
 EOF
 ```
 
+```
+NOTE:
+*kube-apiserver (client) -> etcd (server)
+--etcd-certfile=/var/lib/kubernetes/etcd-server.crt \\
+--etcd-keyfile=/var/lib/kubernetes/etcd-server.key \\
+
+*kube-apiserver (client) -> kubelet (server)
+--kubelet-client-certificate=/var/lib/kubernetes/kube-apiserver.crt \\
+--kubelet-client-key=/var/lib/kubernetes/kube-apiserver.key \\
+```
+
 ### Configure the Kubernetes Controller Manager
 
 Copy the `kube-controller-manager` kubeconfig into place:
