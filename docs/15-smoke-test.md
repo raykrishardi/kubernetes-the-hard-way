@@ -1,12 +1,14 @@
-# Smoke Test
+# Smoke Test (Test to ensure that the most important functionalities of the system is working as intended)
 
 In this lab you will complete a series of tasks to ensure your Kubernetes cluster is functioning correctly.
 
-## Data Encryption
+## Data Encryption (secret objects are encrypted in etcd (encryption at rest))
 
 In this section you will verify the ability to [encrypt secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#verifying-that-data-is-encrypted).
 
-Create a generic secret:
+>Configuration for encryption at rest guide: https://github.com/raykrishardi/kubernetes-the-hard-way/blob/ray-notes/docs/06-data-encryption-keys.md
+
+Create a opaque/generic secret:
 
 ```
 kubectl create secret generic kubernetes-the-hard-way \
@@ -82,10 +84,12 @@ Create a service to expose deployment nginx on node ports.
 ```
 kubectl expose deploy nginx --type=NodePort --port 80
 ```
-
+> **REMEMBER THAT nodePort only opens port within range 30000-32767 in ALL WORKER nodes (excluding MASTER/CONTROL PLANE NODE)**
 
 ```
 PORT_NUMBER=$(kubectl get svc -l app=nginx -o jsonpath="{.items[0].spec.ports[0].nodePort}")
+
+e.g. 31515
 ```
 
 Test to view NGINX page
@@ -106,7 +110,7 @@ curl http://worker-2:$PORT_NUMBER
 <body>
 ```
 
-### Logs
+### Logs (test kube-apiserver to kubelet permission)
 
 In this section you will verify the ability to [retrieve container logs](https://kubernetes.io/docs/concepts/cluster-administration/logging/).
 
@@ -129,7 +133,7 @@ kubectl logs $POD_NAME
 10.40.0.0 - - [20/Mar/2019:10:08:55 +0000] "GET / HTTP/1.1" 200 612 "-" "curl/7.58.0" "-"
 ```
 
-### Exec
+### Exec (test kube-apiserver to kubelet permission)
 
 In this section you will verify the ability to [execute commands in a container](https://kubernetes.io/docs/tasks/debug-application-cluster/get-shell-running-container/#running-individual-commands-in-a-container).
 
