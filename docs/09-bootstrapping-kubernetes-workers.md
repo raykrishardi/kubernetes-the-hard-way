@@ -212,6 +212,12 @@ EOF
 ```
 NOTE:
 1. Run kubelet.service after docker.service has started because kubelet is responsible for creating containers using CRI (e.g. Docker in this case)
+
+2. 
+--tls-cert-file=/var/lib/kubelet/${HOSTNAME}.crt \\
+--tls-private-key-file=/var/lib/kubelet/${HOSTNAME}.key \\
+  
+These are kubelet SERVER certificates, kubelet CLIENT certificates are in kubeconfig which is USED TO INTERACT with the API server (i.e. kubelet is client and API server is server). The client cert is defined in (--kubeconfig=/var/lib/kubelet/kubeconfig)
 ```
 
 ### Configure the Kubernetes Proxy (allows service networking, in the background it creates IP forwarding rules between the service IP and pod IP using default mode "iptables")
