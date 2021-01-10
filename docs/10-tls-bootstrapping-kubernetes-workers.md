@@ -1,26 +1,26 @@
 # TLS Bootstrapping Worker Nodes
 
 In the previous step we configured a worker node by
-- Creating a set of key pairs for the worker node by ourself
+- Creating a set of key pairs for the worker node by ourself (i.e. create client and server certificates for kubelet (SAN, CN, and OU))
 - Getting them signed by the CA by ourself
 - Creating a kube-config file using this certificate by ourself
 - Everytime the certificate expires we must follow the same process of updating the certificate by ourself
 
-This is not a practical approach when you have 1000s of nodes in the cluster, and nodes dynamically being added and removed from the cluster.  With TLS boostrapping:
+This is not a practical approach when you have 1000s of nodes in the cluster, and nodes dynamically being added and removed from the cluster.  With TLS boostrapping (create k8s CSR resource/object):
 
 - The Nodes can generate certificate key pairs by themselves
 - The Nodes can generate certificate signing request by themselves
-- The Nodes can submit the certificate signing request to the Kubernetes CA (Using the Certificates API)
-- The Nodes can retrieve the signed certificate from the Kubernetes CA
+- The Nodes can submit the certificate signing request to the Kubernetes CA (Using the Certificates API) -> **Usually admin with system:masters priviledge will approve the CSR**
+- The Nodes can retrieve the signed certificate from the Kubernetes CA (`kubectl get csr csr-882aa -o yaml` and look for `csr.status.certificate`. **REMEMBER that the cert is in base64 format, need to base64 decode**)
 - The Nodes can generate a kube-config file using this certificate by themselves
-- The Nodes can start and join the cluster by themselves
-- The Nodes can renew certificates when they expire by themselves
+- **The Nodes can start and join the cluster by themselves**
+- **MOST IMPORTANTLY, The Nodes can renew client and server certificates when they expire by themselves**
 
 So let's get started!
 
 # What is required for TLS Bootstrapping
 
-**Certificates API:** The Certificate API (as discussed in the lecture) provides a set of APIs on Kubernetes that can help us manage certificates (Create CSR, Get them signed by CA, Retrieve signed certificate etc). The worker nodes (kubelets) have the ability to use this API to get certificates signed by the Kubernetes CA.
+**Certificates API (i.e. kubectl get csr, kubectl certificate approve/deny):** The Certificate API (as discussed in the lecture) provides a set of APIs on Kubernetes that can help us manage certificates (Create CSR, Get them signed by CA, Retrieve signed certificate etc). The worker nodes (kubelets) have the ability to use this API to get certificates signed by the Kubernetes CA.
 
 # Pre-Requisite
 
@@ -28,7 +28,7 @@ So let's get started!
 
 `--enable-bootstrap-token-auth=true`
 
-**kube-controller-manager** - The certificate requests are signed by the kube-controller-manager ultimately. The kube-controller-manager requires the CA Certificate and Key to perform these operations.
+**kube-controller-manager** - **The certificate signing requests (CSRs) are signed by the kube-controller-manager ultimately**. The kube-controller-manager requires the CA Certificate and Key to perform these operations.
 
 ```
   --cluster-signing-cert-file=/var/lib/kubernetes/ca.crt \\
@@ -80,16 +80,20 @@ Install the worker binaries:
 
 `sudo mv ca.crt /var/lib/kubernetes/`
 
-# Step 1 Create the Boostrap Token to be used by Nodes(Kubelets) to invoke Certificate API
+# Step 1 Create the Boostrap Token to be used by Nodes(Kubelets) to invoke Certificate API in kube-apiserver (kubelet will automatically create CSR to be approved when kubelet.service is started)
 
 For the workers(kubelet) to access the Certificates API, they need to authenticate to the kubernetes api-server first. For this we create a [Bootstrap Token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) to be used by the kubelet
 
 Bootstrap Tokens take the form of a 6 character token id followed by 16 character token secret separated by a dot. Eg: abcdef.0123456789abcdef. More formally, they must match the regular expression [a-z0-9]{6}\.[a-z0-9]{16}
 
+`
+<token ID>.<token secret>
+`
+
 Bootstrap Tokens are created as a secret in the kube-system namespace.
 
 ```
-cat > bootstrap-token-07401b.yaml <<EOF
+master-1 $ cat > bootstrap-token-07401b.yaml <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -129,18 +133,22 @@ Things to note:
 
 Once this is created the token to be used for authentication is `07401b.f395accd246ae52d`
 
+`
+<token ID>.<token secret>
+`
+
 Reference: https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/#bootstrap-token-secret-format
 
-## Step 2 Authorize workers(kubelets) to create CSR
+## Step 2 Authorize workers(kubelets) to create CSR (i.e. you could think of like allow bootstrap token to create CSR)
 
-Next we associate the group we created before to the system:node-bootstrapper ClusterRole. This ClusterRole gives the group enough permissions to bootstrap the kubelet
+Next we associate the group we created before (`(system:bootstrappers)` is used in this case instead of the NEW `(system:bootstrappers:worker)`) to the system:node-bootstrapper ClusterRole. This ClusterRole gives the group enough permissions to bootstrap the kubelet
 
 ```
-kubectl create clusterrolebinding create-csrs-for-bootstrapping --clusterrole=system:node-bootstrapper --group=system:bootstrappers
+master-1 $ kubectl create clusterrolebinding create-csrs-for-bootstrapping --clusterrole=system:node-bootstrapper --group=system:bootstrappers
 
 --------------- OR ---------------
 
-cat > csrs-for-bootstrapping.yaml <<EOF
+master-1 $ cat > csrs-for-bootstrapping.yaml <<EOF
 # enable bootstrapping nodes to create CSR
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -162,13 +170,13 @@ kubectl create -f csrs-for-bootstrapping.yaml
 ```
 Reference: https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#authorize-kubelet-to-create-csr
 
-## Step 3 Authorize workers(kubelets) to approve CSR
+## Step 3 Authorize workers(kubelets) to approve CSR (i.e. you could think of like allow bootstrap token to approve CSR)
 ```
-kubectl create clusterrolebinding auto-approve-csrs-for-group --clusterrole=system:certificates.k8s.io:certificatesigningrequests:nodeclient --group=system:bootstrappers
+master-1 $ kubectl create clusterrolebinding auto-approve-csrs-for-group --clusterrole=system:certificates.k8s.io:certificatesigningrequests:nodeclient --group=system:bootstrappers
 
  --------------- OR ---------------
 
-cat > auto-approve-csrs-for-group.yaml <<EOF
+master-1 $ cat > auto-approve-csrs-for-group.yaml <<EOF
 # Approve all CSRs for the group "system:bootstrappers"
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -190,16 +198,16 @@ kubectl create -f auto-approve-csrs-for-group.yaml
 
 Reference: https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#approval
 
-## Step 3 Authorize workers(kubelets) to Auto Renew Certificates on expiration
+## Step 3 Authorize workers(kubelets) to Auto Renew client and server Certificates on expiration
 
 We now create the Cluster Role Binding required for the nodes to automatically renew the certificates on expiry. Note that we are NOT using the **system:bootstrappers** group here any more. Since by the renewal period, we believe the node would be bootstrapped and part of the cluster already. All nodes are part of the **system:nodes** group.
 
 ```
-kubectl create clusterrolebinding auto-approve-renewals-for-nodes --clusterrole=system:certificates.k8s.io:certificatesigningrequests:selfnodeclient --group=system:nodes
+master-1 $ kubectl create clusterrolebinding auto-approve-renewals-for-nodes --clusterrole=system:certificates.k8s.io:certificatesigningrequests:selfnodeclient --group=system:nodes
 
 --------------- OR ---------------
 
-cat > auto-approve-renewals-for-nodes.yaml <<EOF
+master-1 $ cat > auto-approve-renewals-for-nodes.yaml <<EOF
 # Approve renewal CSRs for the group "system:nodes"
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -221,7 +229,7 @@ kubectl create -f auto-approve-renewals-for-nodes.yaml
 
 Reference: https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#approval
 
-## Step 4 Configure Kubelet to TLS Bootstrap
+## Step 4 Configure Kubelet to TLS Bootstrap (i.e. create kube config file to authenticate to API server using the bootstrap token)
 
 It is now time to configure the second worker to TLS bootstrap using the token we generated
 
@@ -264,7 +272,7 @@ EOF
 
 Reference: https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#kubelet-configuration
 
-## Step 5 Create Kubelet Config File
+## Step 5 Create Kubelet Config File (same as without TLS bootstrap)
 
 Create the `kubelet-config.yaml` configuration file:
 
@@ -289,9 +297,7 @@ runtimeRequestTimeout: "15m"
 EOF
 ```
 
-> Note: We are not specifying the certificate details - tlsCertFile and tlsPrivateKeyFile - in this file
-
-## Step 6 Configure Kubelet Service
+## Step 6 Configure Kubelet Service (different from without TLS bootstrap)
 
 Create the `kubelet.service` systemd unit file:
 
@@ -323,13 +329,17 @@ WantedBy=multi-user.target
 EOF
 ```
 
+> Note: We are not specifying the certificate details - tlsCertFile and tlsPrivateKeyFile - in the `kubelet.service` file
+
+
 Things to note here:
 - **bootstrap-kubeconfig**: Location of the bootstrap-kubeconfig file.
-- **cert-dir**: The directory where the generated certificates are stored.
+- **cert-dir=/var/lib/kubelet/pki/**: The directory where the generated certificates are stored (does NOT exist yet, will be generated once CSR has been approved)
 - **rotate-certificates**: Rotates client certificates when they expire.
-- **rotate-server-certificates**: Requests for server certificates on bootstrap and rotates them when they expire.
-
-## Step 7 Configure the Kubernetes Proxy
+- **rotate-server-certificates**: Requests for server certificates on bootstrap and rotates them when they expire
+- **--kubeconfig=/var/lib/kubelet/kubeconfig** does NOT exist yet, **WILL BE GENERATED ONCE THE CSR HAS BEEN APPROVED**
+ 
+## Step 7 Configure the Kubernetes Proxy (same as worker-1)
 
 In one of the previous steps we created the kube-proxy.kubeconfig file. Check [here](https://github.com/mmumshad/kubernetes-the-hard-way/blob/master/docs/05-kubernetes-configuration-files.md) if you missed it.
 
@@ -383,7 +393,7 @@ EOF
 
 ## Step 9 Approve Server CSR
 
-`kubectl get csr`
+master-1 $ `kubectl get csr`
 
 ```
 NAME                                                   AGE   REQUESTOR                 CONDITION
@@ -393,7 +403,7 @@ csr-95bv6                                              20s   system:node:worker-
 
 Approve
 
-`kubectl certificate approve csr-95bv6`
+master-1 $ `kubectl certificate approve csr-95bv6`
 
 Reference: https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#kubectl-approval
 
