@@ -1,11 +1,11 @@
-## RBAC for Kubelet Authorization
+## RBAC for kube-apiserver (client) TO kubelet (server) Authorization
 
 In this section you will configure RBAC permissions to allow the Kubernetes API Server to access the Kubelet API on each worker node. Access to the Kubelet API is required for retrieving node's status, metrics, logs (i.e. `kubectl logs <pod>`), and executing commands in pods (`kubectl exec -it <pod>`).
 
 > This tutorial sets the Kubelet `--authorization-mode` flag to `Webhook`. Webhook mode uses the [SubjectAccessReview](https://kubernetes.io/docs/admin/authorization/#checking-api-access) API to determine authorization.
 
 
-Create the `system:kube-apiserver-to-kubelet` [ClusterRole](https://kubernetes.io/docs/admin/authorization/rbac/#role-and-clusterrole) with permissions to access the Kubelet API and perform most common tasks associated with managing pods:
+Create the `system:kube-apiserver-to-kubelet` [ClusterRole](https://kubernetes.io/docs/admin/authorization/rbac/#role-and-clusterrole) with permissions to access the Kubelet API (i.e. nodes) and perform most common tasks associated with managing pods:
 
 ```
 cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
@@ -32,9 +32,10 @@ EOF
 ```
 Reference: https://v1-12.docs.kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole
 
-The Kubernetes API Server authenticates to the Kubelet as the `kube-apiserver` user using the client certificate as defined by the `--kubelet-client-certificate` flag.
+The Kubernetes API Server authenticates to the Kubelet as the `kube-apiserver (because CN=/kube-apiserver in the kube-apiserver.crt)` user using the client certificate as defined by the `--kubelet-client-certificate` flag.
 
 ```
+NOTE:
 *kube-apiserver (client) -> kubelet (server)
 --kubelet-client-certificate=/var/lib/kubernetes/kube-apiserver.crt
 --kubelet-client-key=/var/lib/kubernetes/kube-apiserver.key
