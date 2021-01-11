@@ -84,7 +84,9 @@ Create a service to expose deployment nginx on node ports.
 ```
 kubectl expose deploy nginx --type=NodePort --port 80
 ```
-> **REMEMBER THAT nodePort only opens port within range 30000-32767 in ALL WORKER nodes (excluding MASTER/CONTROL PLANE NODE)**
+> **REMEMBER THAT in KTHW deployment (NOT kubeadm) nodePort only opens port within range 30000-32767 in ALL WORKER nodes (excluding MASTER/CONTROL PLANE NODE) WHILE in kubeadm, nodePort only opens port within range 30000-32767 in BOTH MASTER and WORKER nodes**
+
+>
 
 ```
 PORT_NUMBER=$(kubectl get svc -l app=nginx -o jsonpath="{.items[0].spec.ports[0].nodePort}")
